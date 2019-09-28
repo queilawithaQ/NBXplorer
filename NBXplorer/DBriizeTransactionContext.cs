@@ -5,6 +5,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -15,7 +16,7 @@ namespace NBXplorer
 		DBriizeEngine _Engine;
 		DBriize.Transactions.Transaction _Tx;
 		Thread _Loop;
-		readonly BlockingCollection<(Action<DBriize.Transactions.Transaction>, TaskCompletionSource<object>)> _Actions = new BlockingCollection<(Action<DBriize.Transactions.Transaction>, TaskCompletionSource<object>)>(new ConcurrentQueue<(Action<DBriize.Transactions.Transaction>, TaskCompletionSource<object>)>());
+		readonly BlockingCollection<(Action<DBriize.Transactions.Transaction>, TaskCompletionSource<object>, string)> _Actions = new BlockingCollection<(Action<DBriize.Transactions.Transaction>, TaskCompletionSource<object>, string)>(new ConcurrentQueue<(Action<DBriize.Transactions.Transaction>, TaskCompletionSource<object>, string)>());
 		TaskCompletionSource<bool> _Done;
 		CancellationTokenSource _Cancel;
 		bool _IsDisposed;
@@ -52,7 +53,7 @@ namespace NBXplorer
 				foreach (var act in _Actions.GetConsumingEnumerable(_Cancel.Token))
 				{
 					DateTimeOffset now = DateTimeOffset.UtcNow;
-					Logs.Explorer.LogInformation("Start processing...");
+					Logs.Explorer.LogInformation($"Start processing {act.Item3} {_Actions.Count} left...");
 					try
 					{
 						if (!initialized)
@@ -95,37 +96,30 @@ namespace NBXplorer
 				throw new InvalidOperationException("Bug in NBXplorer. _Tx should be set by now, report on github.");
 		}
 
-		public Task DoAsync(Action<DBriize.Transactions.Transaction> action)
+		public Task DoAsync(Action<DBriize.Transactions.Transaction> action, [CallerMemberName]string caller = null)
 		{
 			if (_IsDisposed)
 				throw new ObjectDisposedException(nameof(DBriizeTransactionContext));
-			return DoAsyncCore(action);
+			return DoAsyncCore(action, caller);
 		}
-		public Task<T> DoAsync<T>(Func<DBriize.Transactions.Transaction, T> action)
+		public Task<T> DoAsync<T>(Func<DBriize.Transactions.Transaction, T> action, [CallerMemberName]string caller = null)
 		{
 			if (_IsDisposed)
 				throw new ObjectDisposedException(nameof(DBriizeTransactionContext));
-			return DoAsyncCore(action);
+			return DoAsyncCore(action, caller);
 		}
 
-		private Task DoAsyncCore(Action<DBriize.Transactions.Transaction> action)
+		private Task DoAsyncCore(Action<DBriize.Transactions.Transaction> action, string caller)
 		{
 			var completion = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
-			_Actions.Add(((tx) => { action(tx); completion.TrySetResult(true); }, completion));
-			LogActions();
+			_Actions.Add(((tx) => { action(tx); completion.TrySetResult(true); }, completion, caller));
 			return completion.Task;
 		}
 
-		private void LogActions()
-		{
-			Logs.Explorer.LogInformation($"Actions queued: {_Actions.Count}");
-		}
-
-		private async Task<T> DoAsyncCore<T>(Func<DBriize.Transactions.Transaction, T> action)
+		private async Task<T> DoAsyncCore<T>(Func<DBriize.Transactions.Transaction, T> action, string caller)
 		{
 			var completion = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
-			_Actions.Add(((tx) => { completion.TrySetResult(action(tx)); }, completion));
-			LogActions();
+			_Actions.Add(((tx) => { completion.TrySetResult(action(tx)); }, completion, caller));
 			return (T)(await completion.Task);
 		}
 
@@ -138,7 +132,7 @@ namespace NBXplorer
 			{
 				if (!_IsStarted)
 					return;
-				await DoAsyncCore(tx => { tx.Dispose(); });
+				await DoAsyncCore(tx => { tx.Dispose(); }, "DisposeAsync");
 				_Cancel.Cancel();
 				await _Done.Task;
 			}
