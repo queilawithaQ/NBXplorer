@@ -78,7 +78,7 @@ namespace NBXplorer
 						UnhandledException?.Invoke(this, ex);
 						act.Item2.TrySetException(ex);
 					}
-					Logs.Explorer.LogInformation($"End processing in {(int)(DateTimeOffset.UtcNow - now).TotalSeconds} sec...");
+					Logs.Explorer.LogInformation($"End processing in {(int)(DateTimeOffset.UtcNow - now).Milliseconds} msec {_Actions.Count} left...");
 				}
 			}
 			catch (OperationCanceledException) when (_Cancel.IsCancellationRequested) { }
