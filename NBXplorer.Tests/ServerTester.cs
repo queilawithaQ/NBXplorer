@@ -72,7 +72,7 @@ namespace NBXplorer.Tests
 
 				var cryptoSettings = new NBXplorerNetworkProvider(NetworkType.Regtest).GetFromCryptoCode(CryptoCode);
 				NodeBuilder = NodeBuilder.Create(nodeDownloadData, Network, directory);
-				Logs.Tester.LogInformation("BitcoinD At:" + NodeBuilder.BitcoinD);
+				Logs.Tester.LogInformation("BitcoinD At:" + new DirectoryInfo(NodeBuilder.BitcoinD).FullName);
 				Explorer = NodeBuilder.CreateNode();
 				foreach (var node in NodeBuilder.Nodes)
 				{
