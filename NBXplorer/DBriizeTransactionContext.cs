@@ -112,12 +112,20 @@ namespace NBXplorer
 		{
 			var completion = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
 			_Actions.Add(((tx) => { action(tx); completion.TrySetResult(true); }, completion));
+			LogActions();
 			return completion.Task;
 		}
+
+		private void LogActions()
+		{
+			Logs.Explorer.LogInformation($"Actions queued: {_Actions.Count}");
+		}
+
 		private async Task<T> DoAsyncCore<T>(Func<DBriize.Transactions.Transaction, T> action)
 		{
 			var completion = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
 			_Actions.Add(((tx) => { completion.TrySetResult(action(tx)); }, completion));
+			LogActions();
 			return (T)(await completion.Task);
 		}
 
