@@ -228,7 +228,7 @@ namespace NBXplorer
 		}
 		private void AttachedNode_MessageReceived(Node node, IncomingMessage message)
 		{
-			Logs.Explorer.Log($"Message {message.Message.Command}");
+			Logs.Explorer.LogInformation($"Message {message.Message.Command}");
 			if (message.Message.Payload is InvPayload invs)
 			{
 				// Do not asks transactions if we are synching so that we can process blocks faster
