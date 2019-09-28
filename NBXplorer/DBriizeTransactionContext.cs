@@ -1,4 +1,6 @@
 ﻿using DBriize;
+using Microsoft.Extensions.Logging;
+using NBitcoin.Logging;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -49,6 +51,8 @@ namespace NBXplorer
 				bool initialized = false;
 				foreach (var act in _Actions.GetConsumingEnumerable(_Cancel.Token))
 				{
+					DateTimeOffset now = DateTimeOffset.UtcNow;
+					Logs.NodeServer.LogInformation("Start processing...");
 					try
 					{
 						if (!initialized)
@@ -74,6 +78,7 @@ namespace NBXplorer
 						UnhandledException?.Invoke(this, ex);
 						act.Item2.TrySetException(ex);
 					}
+					Logs.NodeServer.LogInformation($"End processing in {(int)(DateTimeOffset.UtcNow - now).TotalSeconds} sec...");
 				}
 			}
 			catch (OperationCanceledException) when (_Cancel.IsCancellationRequested) { }
